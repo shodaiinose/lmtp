@@ -51,8 +51,7 @@
 #' @param learners_trt \[\code{character}\]\cr A vector of \code{SuperLearner} algorithms for estimation
 #'  of the exposure mechanism. Default is \code{"SL.glm"}, a main effects GLM.
 #'  \bold{Only include candidate learners capable of binary classification}.
-#' @param folds \[\code{integer(1)}\]\cr
-#'  The number of folds to be used for cross-fitting.
+#' @param folds FIX!
 #' @param weights \[\code{numeric(nrow(data))}\]\cr
 #'  An optional vector containing sampling weights.
 #' @param .bound \[\code{numeric(1)}\]\cr
@@ -102,7 +101,7 @@
 lmtp_tmle <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
                       cens = NULL, shift = NULL, shifted = NULL, k = Inf,
                       mtp = FALSE, outcome_type = c("binomial", "continuous", "survival"),
-                      # intervention_type = c("static", "dynamic", "mtp"),
+                      ratios,
                       id = NULL, bounds = NULL,
                       learners_outcome = "SL.glm",
                       learners_trt = "SL.glm",
@@ -130,20 +129,13 @@ lmtp_tmle <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
   checkmate::assertNumeric(bounds, len = 2, finite = TRUE, any.missing = FALSE, sorted = TRUE, null.ok = TRUE)
   checkmate::assertNumeric(weights, len = nrow(data), finite = TRUE, any.missing = FALSE, null.ok = TRUE)
   checkmate::assertNumber(k, lower = 0, upper = Inf)
-  checkmate::assertNumber(folds, lower = 1, upper = nrow(data) - 1)
+  # checkmate::assertNumber(folds, lower = 1, upper = nrow(data) - 1)
   checkmate::assertNumber(.learners_outcome_folds, null.ok = TRUE)
   checkmate::assertNumber(.learners_trt_folds, null.ok = TRUE)
   checkmate::assertSubset(c(trt, outcome, baseline, unlist(time_vary), cens, id), names(data))
   checkmate::assertNumber(.bound)
   checkmate::assertNumber(.trim, upper = 1)
   checkmate::assertLogical(.return_full_fits, len = 1)
-
-  extras <- list(...)
-  if ("intervention_type" %in% names(extras)) {
-    mtp <- extras$intervention_type == "mtp"
-    warning("The `intervention_type` argument of `lmtp_tmle()` is deprecated as of lmtp 1.3.1",
-            call. = FALSE)
-  }
 
   Task <- lmtp_Task$new(
     data = data,
@@ -157,22 +149,22 @@ lmtp_tmle <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
     shifted = shifted,
     id = id,
     outcome_type = match.arg(outcome_type),
-    V = folds,
+    folds = folds,
     weights = weights,
     bounds = bounds,
     bound = .bound
   )
 
-  pb <- progressr::progressor(Task$tau*folds*2)
+  pb <- progressr::progressor(Task$tau*length(folds))
 
-  ratios <- cf_r(Task, learners_trt, mtp, .learners_trt_folds, .trim, .return_full_fits, pb)
-  estims <- cf_tmle(Task, "tmp_lmtp_scaled_outcome", ratios$ratios, learners_outcome, .learners_outcome_folds, .return_full_fits, pb)
+  # ratios <- cf_r(Task, learners_trt, mtp, .learners_trt_folds, .trim, .return_full_fits, pb)
+  estims <- cf_tmle(Task, "tmp_lmtp_scaled_outcome", ratios, learners_outcome, .learners_outcome_folds, .return_full_fits, pb)
 
   theta_dr(
     list(
       estimator = "TMLE",
       m = list(natural = estims$natural, shifted = estims$shifted),
-      r = ratios$ratios,
+      r = ratios,
       tau = Task$tau,
       folds = Task$folds,
       id = Task$id,
@@ -181,7 +173,7 @@ lmtp_tmle <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
       weights = Task$weights,
       shift = if (is.null(shifted)) deparse(substitute((shift))) else NULL,
       fits_m = estims$fits,
-      fits_r = ratios$fits,
+      # fits_r = ratios$fits,
       outcome_type = Task$outcome_type
     ),
     FALSE
@@ -241,8 +233,7 @@ lmtp_tmle <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
 #' @param learners_trt \[\code{character}\]\cr A vector of \code{SuperLearner} algorithms for estimation
 #'  of the exposure mechanism. Default is \code{"SL.glm"}, a main effects GLM.
 #'  \bold{Only include candidate learners capable of binary classification}.
-#' @param folds \[\code{integer(1)}\]\cr
-#'  The number of folds to be used for cross-fitting.
+#' @param folds FIX!
 #' @param weights \[\code{numeric(nrow(data))}\]\cr
 #'  An optional vector containing sampling weights.
 #' @param .bound \[\code{numeric(1)}\]\cr
@@ -290,9 +281,8 @@ lmtp_tmle <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
 #' @example inst/examples/sdr-ex.R
 #' @export
 lmtp_sdr <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
-                     cens = NULL, shift = NULL, shifted = NULL, k = Inf,
+                     cens = NULL, shift = NULL, shifted = NULL, ratios, k = Inf,
                      mtp = FALSE,
-                     # intervention_type = c("static", "dynamic", "mtp"),
                      outcome_type = c("binomial", "continuous", "survival"),
                      id = NULL, bounds = NULL,
                      learners_outcome = "SL.glm",
@@ -341,29 +331,22 @@ lmtp_sdr <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
     shifted = shifted,
     id = id,
     outcome_type = match.arg(outcome_type),
-    V = folds,
+    folds = folds,
     weights = weights,
     bounds = bounds,
     bound = .bound
   )
 
-  extras <- list(...)
-  if ("intervention_type" %in% names(extras)) {
-    mtp <- extras$intervention_type == "mtp"
-    warning("The `intervention_type` argument of `lmtp_sdr()` is deprecated as of lmtp 1.3.1",
-            call. = FALSE)
-  }
+  pb <- progressr::progressor(Task$tau*folds)
 
-  pb <- progressr::progressor(Task$tau*folds*2)
-
-  ratios <- cf_r(Task, learners_trt, mtp, .learners_trt_folds, .trim, .return_full_fits, pb)
-  estims <- cf_sdr(Task, "tmp_lmtp_scaled_outcome", ratios$ratios, learners_outcome, .learners_outcome_folds, .return_full_fits, pb)
+  # ratios <- cf_r(Task, learners_trt, mtp, .learners_trt_folds, .trim, .return_full_fits, pb)
+  estims <- cf_sdr(Task, "tmp_lmtp_scaled_outcome", ratios, learners_outcome, .learners_outcome_folds, .return_full_fits, pb)
 
   theta_dr(
     list(
       estimator = "SDR",
       m = list(natural = estims$natural, shifted = estims$shifted),
-      r = ratios$ratios,
+      r = ratios,
       tau = Task$tau,
       folds = Task$folds,
       id = Task$id,
@@ -426,8 +409,7 @@ lmtp_sdr <- function(data, trt, outcome, baseline = NULL, time_vary = NULL,
 #'  Should be left as \code{NULL} if the outcome type is binary.
 #' @param learners \[\code{character}\]\cr A vector of \code{SuperLearner} algorithms for estimation
 #'  of the outcome regression. Default is \code{"SL.glm"}, a main effects GLM.
-#' @param folds \[\code{integer(1)}\]\cr
-#'  The number of folds to be used for cross-fitting.
+#' @param folds FIX!
 #' @param weights \[\code{numeric(nrow(data))}\]\cr
 #'  An optional vector containing sampling weights.
 #' @param .bound \[\code{numeric(1)}\]\cr
@@ -499,7 +481,7 @@ lmtp_sub <- function(data, trt, outcome, baseline = NULL, time_vary = NULL, cens
     shifted = shifted,
     id = id,
     outcome_type = match.arg(outcome_type),
-    V = folds,
+    folds = folds,
     weights = weights,
     bounds = bounds,
     bound = .bound
@@ -570,8 +552,7 @@ lmtp_sub <- function(data, trt, outcome, baseline = NULL, time_vary = NULL, cens
 #' @param learners \[\code{character}\]\cr A vector of \code{SuperLearner} algorithms for estimation
 #'  of the exposure mechanism. Default is \code{"SL.glm"}, a main effects GLM.
 #'  \bold{Only include candidate learners capable of binary classification}.
-#' @param folds \[\code{integer(1)}\]\cr
-#'  The number of folds to be used for cross-fitting.
+#' @param folds FIX!
 #' @param weights \[\code{numeric(nrow(data))}\]\cr
 #'  An optional vector containing sampling weights.
 #' @param .bound \[\code{numeric(1)}\]\cr
@@ -612,7 +593,7 @@ lmtp_sub <- function(data, trt, outcome, baseline = NULL, time_vary = NULL, cens
 #' @example inst/examples/ipw-ex.R
 lmtp_ipw <- function(data, trt, outcome, baseline = NULL, time_vary = NULL, cens = NULL,
                      shift = NULL, shifted = NULL, mtp = FALSE,
-                     # intervention_type = c("static", "dynamic", "mtp"),
+                     ratios,
                      k = Inf, id = NULL,
                      outcome_type = c("binomial", "continuous", "survival"),
                      learners = "SL.glm",
@@ -658,7 +639,7 @@ lmtp_ipw <- function(data, trt, outcome, baseline = NULL, time_vary = NULL, cens
     shifted = shifted,
     id = id,
     outcome_type = match.arg(outcome_type),
-    V = folds,
+    folds = folds,
     weights = weights,
     bounds = NULL,
     bound = .bound
@@ -666,21 +647,14 @@ lmtp_ipw <- function(data, trt, outcome, baseline = NULL, time_vary = NULL, cens
 
   pb <- progressr::progressor(Task$tau*folds)
 
-  extras <- list(...)
-  if ("intervention_type" %in% names(extras)) {
-    mtp <- extras$intervention_type == "mtp"
-    warning("The `intervention_type` argument of `lmtp_ipw()` is deprecated as of lmtp 1.3.1",
-            call. = FALSE)
-  }
-
-  ratios <- cf_r(Task, learners, mtp, .learners_folds, .trim, .return_full_fits, pb)
+  # ratios <- cf_r(Task, learners, mtp, .learners_folds, .trim, .return_full_fits, pb)
 
   theta_ipw(
     eta = list(
       r = matrix(
-        t(apply(ratios$ratios, 1, cumprod)),
-        nrow = nrow(ratios$ratios),
-        ncol = ncol(ratios$ratios)
+        t(apply(ratios, 1, cumprod)),
+        nrow = nrow(ratios),
+        ncol = ncol(ratios)
       ),
       y = if (Task$survival) {
         convert_to_surv(data[[final_outcome(outcome)]])
