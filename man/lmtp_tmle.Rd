@@ -16,17 +16,14 @@ lmtp_tmle(
   k = Inf,
   mtp = FALSE,
   outcome_type = c("binomial", "continuous", "survival"),
+  ratios,
   id = NULL,
   bounds = NULL,
-  learners_outcome = "SL.glm",
-  learners_trt = "SL.glm",
+  learners_outcome = "glm",
+  learners_trt = "glm",
   folds = 10,
   weights = NULL,
-  .bound = 1e-05,
-  .trim = 0.999,
-  .learners_outcome_folds = 10,
-  .learners_trt_folds = 10,
-  .return_full_fits = FALSE,
+  control = lmtp_control(),
   ...
 )
 }
@@ -86,36 +83,11 @@ An optional, ordered vector of the bounds for a continuous outcomes. If \code{NU
 the bounds will be taken as the minimum and maximum of the observed data.
 Should be left as \code{NULL} if the outcome type is binary.}
 
-\item{learners_outcome}{[\code{character}]\cr A vector of \code{SuperLearner} algorithms for estimation
-of the outcome regression. Default is \code{"SL.glm"}, a main effects GLM.}
-
-\item{learners_trt}{[\code{character}]\cr A vector of \code{SuperLearner} algorithms for estimation
-of the exposure mechanism. Default is \code{"SL.glm"}, a main effects GLM.
-\bold{Only include candidate learners capable of binary classification}.}
-
-\item{folds}{[\code{integer(1)}]\cr
-The number of folds to be used for cross-fitting.}
-
 \item{weights}{[\code{numeric(nrow(data))}]\cr
 An optional vector containing sampling weights.}
 
-\item{.bound}{[\code{numeric(1)}]\cr
-Determines that maximum and minimum values (scaled) predictions
-will be bounded by. The default is 1e-5, bounding predictions by 1e-5 and 0.9999.}
-
-\item{.trim}{[\code{numeric(1)}]\cr
-Determines the amount the density ratios should be trimmed.
-The default is 0.999, trimming the density ratios greater than the 0.999 percentile
-to the 0.999 percentile. A value of 1 indicates no trimming.}
-
-\item{.learners_outcome_folds}{[\code{integer(1)}]\cr
-The number of cross-validation folds for \code{learners_outcome}.}
-
-\item{.learners_trt_folds}{[\code{integer(1)}]\cr
-The number of cross-validation folds for \code{learners_trt}.}
-
-\item{.return_full_fits}{[\code{logical(1)}]\cr
-Return full SuperLearner fits? Default is \code{FALSE}, return only SuperLearner weights.}
+\item{control}{[\code{list()}]\cr
+Output of \code{lmtp_control()}.}
 
 \item{...}{Extra arguments. Exists for backwards compatibility.}
 }
@@ -152,150 +124,5 @@ This differs from other causal effects,
 such as the average treatment effect (ATE), where an exposure would be increased (or decreased) deterministically.
 \bold{If your intervention of interest adds, subtracts, or multiplies the observed treatment values
 by some amount, use \code{mtp = TRUE}}.
-}
-}
-\examples{
-\donttest{
-  set.seed(56)
-  n <- 1000
-  W <- rnorm(n, 10, 5)
-  A <- 23 + 5*W + rnorm(n)
-  Y <- 7.2*A + 3*W + rnorm(n)
-  ex1_dat <- data.frame(W, A, Y)
-
-  # Example 1.1
-  # Point treatment, continuous exposure, continuous outcome, no loss-to-follow-up
-  # Interested in the effect of a modified treatment policy where A is decreased by 15
-  # units only among observations whose observed A was above 80.
-  # The true value under this intervention is about 513.
-  policy <- function(data, x) {
-    (data[[x]] > 80)*(data[[x]] - 15) + (data[[x]] <= 80)*data[[x]]
-  }
-
-  lmtp_tmle(ex1_dat, "A", "Y", "W", shift = policy,
-            outcome_type = "continuous", folds = 2, mtp = TRUE)
-
-  # Example 2.1
-  # Longitudinal setting, time-varying continuous exposure bounded by 0,
-  # time-varying covariates, and a binary outcome with no loss-to-follow-up.
-  # Interested in the effect of a treatment policy where exposure decreases by
-  # one unit at every time point if an observations observed exposure is greater
-  # than or equal to 2. The true value under this intervention is about 0.305.
-  head(sim_t4)
-
-  A <- c("A_1", "A_2", "A_3", "A_4")
-  L <- list(c("L_1"), c("L_2"), c("L_3"), c("L_4"))
-  policy <- function(data, trt) {
-    a <- data[[trt]]
-    (a - 1) * (a - 1 >= 1) + a * (a - 1 < 1)
-  }
-
-  # BONUS: progressr progress bars!
-  progressr::handlers(global = TRUE)
-
-  lmtp_tmle(sim_t4, A, "Y", time_vary = L, shift = policy,
-            folds = 2, mtp = TRUE)
-
-  # Example 2.2
-  # The previous example assumed that the outcome (as well as the treatment variables)
-  # were directly affected by all other nodes in the past. In certain situations,
-  # domain specific knowledge may suggest otherwise.
-  # This can be controlled using the k argument.
-  lmtp_tmle(sim_t4, A, "Y", time_vary = L, shift = policy,
-            k = 0, folds = 2, mtp = TRUE)
-
-  # Example 2.3
-  # Using the same data as examples 2.1 and 2.2.
-  # Now estimating the effect of a dynamic modified treatment policy.
-  # creating a dynamic mtp that applies the shift function
-  # but also depends on history and the current time
-  policy <- function(data, trt) {
-    mtp <- function(data, trt) {
-      (data[[trt]] - 1) * (data[[trt]] - 1 >= 1) + data[[trt]] * (data[[trt]] - 1 < 1)
-    }
-
-    # if its the first time point, follow the same mtp as before
-    if (trt == "A_1") return(mtp(data, trt))
-
-    # otherwise check if the time varying covariate equals 1
-    ifelse(
-      data[[sub("A", "L", trt)]] == 1,
-      mtp(data, trt), # if yes continue with the policy
-      data[[trt]]     # otherwise do nothing
-    )
-  }
-
-  lmtp_tmle(sim_t4, A, "Y", time_vary = L, mtp = TRUE,
-            k = 0, shift = policy, folds = 2)
-
-  # Example 2.4
-  # Using the same data as examples 2.1, 2.2, and 2.3, but now treating the exposure
-  # as an ordered categorical variable. To account for the exposure being a
-  # factor we just need to modify the shift function (and the original data)
-  # so as to respect this.
-  tmp <- sim_t4
-  for (i in A) {
-    tmp[[i]] <- factor(tmp[[i]], levels = 0:5, ordered = TRUE)
-  }
-
-  policy <- function(data, trt) {
-    out <- list()
-    a <- data[[trt]]
-    for (i in 1:length(a)) {
-      if (as.character(a[i]) \%in\% c("0", "1")) {
-        out[[i]] <- as.character(a[i])
-      } else {
-        out[[i]] <- as.numeric(as.character(a[i])) - 1
-      }
-    }
-    factor(unlist(out), levels = 0:5, ordered = TRUE)
-  }
-
-  lmtp_tmle(tmp, A, "Y", time_vary = L, shift = policy,
-            k = 0, folds = 2, mtp = TRUE)
-
-  # Example 3.1
-  # Longitudinal setting, time-varying binary treatment, time-varying covariates
-  # and baseline covariates with no loss-to-follow-up. Interested in a "traditional"
-  # causal effect where treatment is set to 1 at all time points for all observations.
-  if (require("twang")) {
-    data("iptwExWide", package = "twang")
-
-    A <- paste0("tx", 1:3)
-    W <- c("gender", "age")
-    L <- list(c("use0"), c("use1"), c("use2"))
-
-    lmtp_tmle(iptwExWide, A, "outcome", baseline = W, time_vary = L,
-              shift = static_binary_on, outcome_type = "continuous",
-              mtp = FALSE, folds = 2)
-  }
-
-  # Example 4.1
-  # Longitudinal setting, time-varying continuous treatment, time-varying covariates,
-  # binary outcome with right censoring. Interested in the mean population outcome under
-  # the observed exposures in a hypothetical population with no loss-to-follow-up.
-  head(sim_cens)
-
-  A <- c("A1", "A2")
-  L <- list(c("L1"), c("L2"))
-  C <- c("C1", "C2")
-  Y <- "Y"
-
-  lmtp_tmle(sim_cens, A, Y, time_vary = L, cens = C, shift = NULL, folds = 2)
-
-  # Example 5.1
-  # Time-to-event analysis with a binary time-invariant exposure. Interested in
-  # the effect of treatment being given to all observations on the cumulative
-  # incidence of the outcome.
-  # For a survival problem, the outcome argument now takes a vector of outcomes
-  # if an observation experiences the event prior to the end of follow-up, all future
-  # outcome nodes should be set to 1 (i.e., last observation carried forward).
-  A <- "trt"
-  Y <- paste0("Y.", 1:6)
-  C <- paste0("C.", 0:5)
-  W <- c("W1", "W2")
-
-  lmtp_tmle(sim_point_surv, A, Y, W, cens = C, folds = 2,
-            shift = static_binary_on, outcome_type = "survival")
 }
 }
