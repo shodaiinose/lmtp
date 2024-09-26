@@ -101,8 +101,8 @@ lmtp_survival <- function(data, trt, outcomes, baseline = NULL, time_vary = NULL
   t <- 5
   cli::cli_progress_step("Working on time {t}/{tau}...")
   for (t in 5:tau) {
-    if (length(trt) > 1) args$trt <- trt[1:t]
-    if (length(args$time_vary) > 1) args$time_vary <- time_vary[1:t]
+    if (length(trt) > 1) args$trt <- trt[1:5]
+    if (length(args$time_vary) > 1) args$time_vary <- time_vary[1:5]
     args$outcome <- outcomes[1:t]
     args$cens <- cens[1:t]
     args$competing_risk <- competing_risk[1:t]
