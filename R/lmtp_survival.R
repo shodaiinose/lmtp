@@ -126,7 +126,7 @@ isotonic_projection <- function(x, alpha = 0.05) {
   estim <- tidy.lmtp_survival(x)
   iso_fit <- isotone::gpava(1:length(x), 1 - estim$estimate)
   for (i in seq_along(x)) {
-    x[[i]]$theta <- (1 - iso_fit$y[i])
+    x[[i]]$theta <- iso_fit$y[i]
     x[[i]]$low <- x[[i]]$theta - (qnorm(0.975) * x[[i]]$standard_error)
     x[[i]]$high <- x[[i]]$theta + (qnorm(0.975) * x[[i]]$standard_error)
   }
