@@ -98,9 +98,9 @@ lmtp_survival <- function(data, trt, outcomes, baseline = NULL, time_vary = NULL
   if (estimator == "lmtp_tmle") expr <- expression(do.call(lmtp_tmle, args))
   else expr <- expression(do.call(lmtp_sdr, args))
 
-  t <- 1
+  t <- 5
   cli::cli_progress_step("Working on time {t}/{tau}...")
-  for (t in 1:tau) {
+  for (t in 5:tau) {
     if (length(trt) > 1) args$trt <- trt[1:t]
     if (length(args$time_vary) > 1) args$time_vary <- time_vary[1:t]
     args$outcome <- outcomes[1:t]
@@ -124,9 +124,9 @@ lmtp_survival <- function(data, trt, outcomes, baseline = NULL, time_vary = NULL
 isotonic_projection <- function(x, alpha = 0.05) {
   cv <- abs(qnorm(p = alpha / 2))
   estim <- tidy.lmtp_survival(x)
-  iso_fit <- isotone::gpava(1:length(x), estim$estimate)
+  iso_fit <- isotone::gpava(1:length(x), 1 - estim$estimate)
   for (i in seq_along(x)) {
-    x[[i]]$theta <- iso_fit$y[i]
+    x[[i]]$theta <- (1 - iso_fit$y[i])
     x[[i]]$low <- x[[i]]$theta - (qnorm(0.975) * x[[i]]$standard_error)
     x[[i]]$high <- x[[i]]$theta + (qnorm(0.975) * x[[i]]$standard_error)
   }
