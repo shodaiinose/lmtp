@@ -106,9 +106,7 @@ lmtp_survival <- function(data, trt, outcomes, baseline = NULL, time_vary = NULL
     args$outcome <- outcomes[1:t]
     args$cens <- cens[1:t]
     args$competing_risk <- competing_risk[1:t]
-    #args$outcome_type <- ifelse(t == 1, "binomial", "survival")
-    args$outcome_type <- "survival"
-
+    args$outcome_type <- ifelse(t == 1, "binomial", "survival")
 
     estimates[[t]] <- future::future(eval(expr), seed = TRUE)
     cli::cli_progress_update()
