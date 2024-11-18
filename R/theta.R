@@ -117,7 +117,8 @@ theta_dr <- function(eta, augmented = FALSE) {
     weights = eta$weights,
     fits_m = eta$fits_m,
     fits_r = eta$fits_r,
-    outcome_type = eta$outcome_type
+    outcome_type = eta$outcome_type,
+    riesz_weights = eta$riesz_weights
   )
 
   class(out) <- "lmtp"
