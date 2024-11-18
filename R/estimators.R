@@ -220,7 +220,8 @@ lmtp_tmle <- function(data,
       shift = if (is.null(shifted)) deparse(substitute((shift))) else NULL,
       fits_m = estims$fits,
       fits_r = ratios$fits,
-      outcome_type = task$outcome_type
+      outcome_type = task$outcome_type,
+      riesz_weights = ratios$weights
     ),
     FALSE
   )
