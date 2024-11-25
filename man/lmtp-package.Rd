@@ -27,7 +27,7 @@ Authors:
 
 Other contributors:
 \itemize{
-  \item Katherine Hoffman \email{kah2797@med.cornell.edu} [contributor]
+  \item Katherine Hoffman \email{kh3233@cumc.columbia.edu} [contributor]
 }
 
 }

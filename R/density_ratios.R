@@ -1,11 +1,11 @@
 cf_r <- function(task, learners, mtp, control, pb) {
   out <- vector("list", length = length(task$folds))
-  
+
   if (length(learners) == 1 && learners == "SL.mean") {
     warning("Using 'SL.mean' as the only learner of the density ratios will always result in a misspecified model! If your exposure is randomized, consider using `c('SL.glm', 'SL.glmnet')`.",
             call. = FALSE)
   }
-  
+
   for (fold in seq_along(task$folds)) {
     out[[fold]] <- future::future({
       estimate_r(
@@ -51,14 +51,14 @@ estimate_r <- function(natural, shifted, trt, cens, risk, competing_risk, tau, n
     vars <- c(node_list[[t]], cens[[t]])
     stacked <- stack_data(natural$train, shifted$train, trt, cens, t)
 
-    fit <- run_ensemble(
-      stacked[jrt & drt, ][["tmp_lmtp_stack_indicator"]],
-      stacked[jrt & drt, vars],
-      learners,
-      "binomial",
-      stacked[jrt & drt, ]$lmtp_id,
-      control$.learners_trt_folds
-    )
+    fit <- run_ensemble(stacked[jrt & drt, c("lmtp_id", vars, "tmp_lmtp_stack_indicator")],
+                        "tmp_lmtp_stack_indicator",
+                        learners,
+                        "binomial",
+                        "lmtp_id",
+                        control$.learners_trt_folds,
+                        control$.discrete,
+                        control$.info)
 
     if (control$.return_full_fits) {
       fits[[t]] <- fit
@@ -67,7 +67,7 @@ estimate_r <- function(natural, shifted, trt, cens, risk, competing_risk, tau, n
     }
 
     pred <- matrix(-999L, nrow = nrow(natural$valid), ncol = 1)
-    pred[jrv & drv, ] <- bound(SL_predict(fit, natural$valid[jrv & drv, vars]), .Machine$double.eps)
+    pred[jrv & drv, ] <- bound(predict(fit, natural$valid[jrv & drv, c("lmtp_id", vars)]), .Machine$double.eps)
 
     ratios <- density_ratios(pred, irv, drv, frv, mtp)
     densratios[, t] <- ratios

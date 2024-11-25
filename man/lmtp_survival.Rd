@@ -11,6 +11,7 @@ lmtp_survival(
   baseline = NULL,
   time_vary = NULL,
   cens = NULL,
+  competing_risk = NULL,
   shift = NULL,
   shifted = NULL,
   estimator = c("lmtp_tmle", "lmtp_sdr"),

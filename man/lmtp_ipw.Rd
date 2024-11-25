@@ -18,7 +18,7 @@ lmtp_ipw(
   k = Inf,
   id = NULL,
   outcome_type = c("binomial", "continuous", "survival"),
-  learners = "SL.glm",
+  learners = "glm",
   folds = 10,
   weights = NULL,
   control = lmtp_control()
@@ -81,8 +81,8 @@ An optional column name containing cluster level identifiers.}
 \item{outcome_type}{[\code{character(1)}]\cr
 Outcome variable type (i.e., continuous, binomial, survival).}
 
-\item{learners}{[\code{character}]\cr A vector of \code{SuperLearner} algorithms for estimation
-of the exposure mechanism. Default is \code{"SL.glm"}, a main effects GLM.
+\item{learners}{[\code{character}]\cr A vector of \code{mlr3superlearner} algorithms for estimation
+of the exposure mechanism. Default is \code{"glm"}, a main effects GLM.
 \bold{Only include candidate learners capable of binary classification}.}
 
 \item{folds}{[\code{integer(1)}]\cr

@@ -18,7 +18,7 @@ lmtp_sub(
   outcome_type = c("binomial", "continuous", "survival"),
   id = NULL,
   bounds = NULL,
-  learners = "SL.glm",
+  learners = "glm",
   folds = 10,
   weights = NULL,
   control = lmtp_control()
@@ -82,8 +82,8 @@ An optional, ordered vector of the bounds for a continuous outcomes. If \code{NU
 the bounds will be taken as the minimum and maximum of the observed data.
 Should be left as \code{NULL} if the outcome type is binary.}
 
-\item{learners}{[\code{character}]\cr A vector of \code{SuperLearner} algorithms for estimation
-of the outcome regression. Default is \code{"SL.glm"}, a main effects GLM.}
+\item{learners}{[\code{character}]\cr A vector of \code{mlr3superlearner} algorithms for estimation
+of the outcome regression. Default is \code{"glm"}, a main effects GLM.}
 
 \item{folds}{[\code{integer(1)}]\cr
 The number of folds to be used for cross-fitting.}
