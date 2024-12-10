@@ -26,9 +26,9 @@ lmtp_task <- R6::R6Class(
       self$trt <- trt
       self$risk <- risk_indicators(outcome)
 
-      if (outcome_type != "survival" & !is.null(competing_risk)) {
-        stop("Competing risks only allowed with `outcome_type = 'survival`", call. = FALSE)
-      }
+      #if (outcome_type != "survival" & !is.null(competing_risk)) {
+      #  stop("Competing risks only allowed with `outcome_type = 'survival`", call. = FALSE)
+      #}
 
       self$competing_risk <- risk_indicators(competing_risk)
       self$cens <- cens
