@@ -4,6 +4,7 @@ run_ensemble <- function(data, y, learners, outcome_type, id, folds) {
     target = y,
     library = learners,
     outcome_type = outcome_type,
+    discrete = FALSE,
     folds = folds,
     group = {
       if (length(unique(data[[id]])) == nrow(data))
