@@ -37,7 +37,9 @@ estimate_density_ratios <- function(task, fold, learners, mtp, control, pb) {
     i <- task$observed(natural$train, time - 1) %and% task$is_at_risk(natural$train, time)
     i <- rep(i, 2)
     A_t <- current_trt(task$vars$A, time)
-    vars <- c("..i..lmtp_id", task$vars$history("A", time), A_t, task$vars$C[time], "..i..lmtp_stack_indicator")
+    #vars <- c("..i..lmtp_id", task$vars$history("A", time), A_t, task$vars$C[time], "..i..lmtp_stack_indicator")
+    vars <- c("..i..lmtp_id", task$vars$history("A", time), task$vars$C[time], "..i..lmtp_stack_indicator") # remove A from vars
+
     vars <- na.omit(vars)
     stacked <- stack_data(natural$train, shifted$train, task$vars$A, task$vars$C, time)
 
@@ -64,6 +66,7 @@ estimate_density_ratios <- function(task, fold, learners, mtp, control, pb) {
                  data = stacked[i, ],
                  family = binomial())
     } else {
+
       fit <- run_ensemble(stacked[i, vars], "..i..lmtp_stack_indicator",
                           learners, "binomial", "..i..lmtp_id",
                           control$.learners_trt_folds,

@@ -10,6 +10,11 @@ cf_tmle <- function(task, density_ratios, learners, control, progress_bar) {
     seed = TRUE)
   }
 
+  # # NON-FUTURE FOR DEBUGGING
+  # for (fold in seq_along(task$folds)) {
+  #   ans[[fold]] <- estimate_tmle(task, fold, density_ratios, learners, control, progress_bar)
+  # }
+
   ans <- future::value(ans)
 
   list(natural = recombine(rbind_depth(ans, "natural"), task$folds),
@@ -39,6 +44,8 @@ estimate_tmle <- function(task, fold, density_ratios, learners, control, progres
     i <- c1 %and% (y1 & d0)
 
     history <- task$vars$history("L", time + 1)
+    history <- history[!history %in% task$vars$A]
+
     vars <- c("..i..lmtp_id", history, task$vars$Y)
 
     fit <- run_ensemble(natural$train[i, vars], task$vars$Y,
@@ -68,14 +75,14 @@ estimate_tmle <- function(task, fold, density_ratios, learners, control, progres
     under_shift_train <- natural$train[ip, c("..i..lmtp_id", history)]
     under_shift_valid <- natural$valid[iv, c("..i..lmtp_id", history)]
 
-    if (!is.na(A_t)) {
-      under_shift_train[, A_t] <- shifted$train[ip, A_t]
-      under_shift_valid[, A_t] <- shifted$valid[iv, A_t]
-    }
+    # if (!is.na(A_t)) {
+    #   under_shift_train[, A_t] <- shifted$train[ip, A_t]
+    #   under_shift_valid[, A_t] <- shifted$valid[iv, A_t]
+    # }
 
-    pred_natural_train[ip, time] <- predict(fit, natural$train[ip, ], 1e-05)
+    pred_natural_train[ip, time] <- predict(fit, natural$train[ip, vars], 1e-05)
     pred_shifted_train[ip, time] <- predict(fit, under_shift_train, 1e-05)
-    pred_natural_valid[iv, time] <- predict(fit, natural$valid[iv, ], 1e-05)
+    pred_natural_valid[iv, time] <- predict(fit, natural$valid[iv, vars], 1e-05)
     pred_shifted_valid[iv, time] <- predict(fit, under_shift_valid, 1e-05)
 
     # fit fluctuation model
