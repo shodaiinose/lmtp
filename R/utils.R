@@ -36,7 +36,41 @@ followed_rule <- function(natural, shifted, A, mtp) {
   }
 
   apply(followed, 1, prod)
+
+  browser()
 }
+
+followed_rule_NEW <- function(natural, shifted, A, mtp) {
+  if (mtp) {
+    return(rep(TRUE, nrow(natural)))
+  }
+
+  A <- A[!is.na(A)]
+
+  if (length(A) == 0) {
+    return(rep(TRUE, nrow(natural)))
+  }
+
+  followed <- matrix(nrow = nrow(natural), ncol = length(A))
+
+  for (i in seq_along(A)) {
+    a <- A[i]
+
+    if (is.na(a) || !(a %in% names(natural))) {
+      followed[, i] <- TRUE
+      next
+    }
+
+    followed[, i] <- mapply(
+      function(x, y) isTRUE(all.equal(x, y)),
+      as.list(natural[, a]),
+      as.list(shifted[, a])
+    )
+  }
+
+  apply(followed, 1, all)
+}
+
 
 trim <- function(x, trim) {
   pmin(x, quantile(x, trim, na.rm = TRUE))
