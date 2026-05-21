@@ -68,15 +68,10 @@ estimate_density_ratios <- function(task, fold, learners, mtp, control, pb) {
     vars_cens <- c("..i..lmtp_id", task$vars$C[time], "..i..lmtp_stack_indicator")
     vars_cens <- stats::na.omit(vars_cens)
     
-    cens_fit <- run_ensemble(
-      x = stacked[i, vars_cens, drop = FALSE],
-      y = "..i..lmtp_stack_indicator",
-      learners = learners,
-      family = "binomial",
-      id = "..i..lmtp_id",
-      folds = control$.learners_trt_folds,
-      discrete = control$.discrete,
-      info = control$.info
+    cens_fit <- run_ensemble(stacked[i, vars_cens, drop = FALSE],
+      "..i..lmtp_stack_indicator",
+      learners, "binomial", "..i..lmtp_id",
+      control$.learners_trt_folds, control$.discrete, control$.info
     )
     
     # store fits
