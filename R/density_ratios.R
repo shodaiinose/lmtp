@@ -20,7 +20,6 @@ cf_density_ratios <- function(task, learners, mtp, control, pb) {
   # }
   
   ans <- future::value(ans)
-  density_ratios= recombine(rbind_depth(ans, "ratios"), task$folds)
   ans <- list(density_ratios = recombine(rbind_depth(ans, "ratios"), task$folds),
               fits = lapply(ans, function(x) x[["fits"]]))
   
@@ -55,10 +54,10 @@ estimate_density_ratios <- function(task, fold, learners, mtp, control, pb) {
     # ---- CENSORING MODEL (W, Z, R, and an ensemble of learners) ----
     } else {
       fit <- run_ensemble(stacked[i, vars], "..i..lmtp_stack_indicator",
-                               learners, "binomial", "..i..lmtp_id",
-                               control$.learners_trt_folds, 
-                               control$.discrete, 
-                               control$.info
+                          learners, "binomial", "..i..lmtp_id",
+                          control$.learners_trt_folds, 
+                          control$.discrete, 
+                          control$.info
       )
       
     }
