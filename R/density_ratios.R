@@ -7,17 +7,17 @@ cf_density_ratios <- function(task, learners, mtp, control, pb) {
   }
   
   # For production / parallel execution
-  # for (fold in seq_along(task$folds)) {
-  #   ans[[fold]] <- future::future({
-  #     estimate_density_ratios(task, fold, learners, mtp, control, pb)
-  #   },
-  #   seed = TRUE)
-  # }
+  for (fold in seq_along(task$folds)) {
+    ans[[fold]] <- future::future({
+      estimate_density_ratios(task, fold, learners, mtp, control, pb)
+    },
+    seed = TRUE)
+  }
   
   # NON-FUTURE FOR DEBUGGING
-  for (fold in seq_along(task$folds)) {
-    ans[[fold]] <- estimate_density_ratios(task, fold, learners, mtp, control, pb)
-  }
+  # for (fold in seq_along(task$folds)) {
+  #   ans[[fold]] <- estimate_density_ratios(task, fold, learners, mtp, control, pb)
+  # }
   
   ans <- future::value(ans)
   density_ratios= recombine(rbind_depth(ans, "ratios"), task$folds)
